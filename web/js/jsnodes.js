@@ -169,6 +169,7 @@ app.registerExtension({
 					this.outputs[1]["name"] = values[1] + " width"
 					this.outputs[2]["name"] = values[2] + " height" 
 					this.outputs[3]["name"] = values[0] + " count" 
+					this.outputs[4]["name"] = values[3] + " ratio" 
 					return r
 				}
 				break;

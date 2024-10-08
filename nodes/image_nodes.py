@@ -751,8 +751,8 @@ class GetImageSizeAndCount:
             "image": ("IMAGE",),
         }}
 
-    RETURN_TYPES = ("IMAGE","INT", "INT", "INT",)
-    RETURN_NAMES = ("image", "width", "height", "count",)
+    RETURN_TYPES = ("IMAGE","INT", "INT", "INT", "RATIO")
+    RETURN_NAMES = ("image", "width", "height", "count", "ratio")
     FUNCTION = "getsize"
     CATEGORY = "KJNodes/image"
     DESCRIPTION = """
@@ -761,13 +761,77 @@ and passes it through unchanged.
 
 """
 
+    def resizeHank(self, image, width, height, keep_proportion, upscale_method, divisible_by, 
+               width_input=None, height_input=None, get_image_size=None, crop="disabled"):
+        B, H, W, C = image.shape
+
+        if width_input:
+            width = width_input
+        if height_input:
+            height = height_input
+        if get_image_size is not None:
+            _, height, width, _ = get_image_size.shape
+        
+        if keep_proportion and get_image_size is None:
+                # If one of the dimensions is zero, calculate it to maintain the aspect ratio
+                if width == 0 and height != 0:
+                    ratio = height / H
+                    width = round(W * ratio)
+                elif height == 0 and width != 0:
+                    ratio = width / W
+                    height = round(H * ratio)
+                elif width != 0 and height != 0:
+                    # Scale based on which dimension is smaller in proportion to the desired dimensions
+                    ratio = min(width / W, height / H)
+                    width = round(W * ratio)
+                    height = round(H * ratio)
+        else:
+            if width == 0:
+                width = W
+            if height == 0:
+                height = H
+      
+        if divisible_by > 1 and get_image_size is None:
+            width = width - (width % divisible_by)
+            height = height - (height % divisible_by)
+        
+        image = image.movedim(-1,1)
+        image = common_upscale(image, width, height, upscale_method, crop)
+        image = image.movedim(1,-1)
+
+        return(image, image.shape[2], image.shape[1],)
     def getsize(self, image):
         width = image.shape[2]
         height = image.shape[1]
         count = image.shape[0]
+        ## check the image size to resize each image
+        output_image = None
+        target_width = None
+        target_height = None
+        
+        for idx in range(count):
+            cur_image = image[idx][None,]
+            if target_width is None:
+                B, H, W, C = cur_image.shape
+                max_length = max(H,W)
+                if max_length > 1024:
+                    ratio = 4
+                    target_height = H//ratio
+                    target_width = W//ratio
+                else:
+                    ratio = 2
+                    target_height = H//ratio
+                    target_width = W//ratio
+            cur_image, cur_width, cur_height = self.resizeHank(cur_image, target_width, target_height, True, 'lanczos', 64)
+            if output_image is not None:
+                output_image = torch.cat((output_image, cur_image),dim=0)
+            else:
+                output_image = cur_image
+        width = cur_width
+        height = cur_height
         return {"ui": {
-            "text": [f"{count}x{width}x{height}"]}, 
-            "result": (image, width, height, count) 
+            "text": [f"{count}x{width}x{height}x{ratio}"]}, 
+            "result": (output_image, width, height, count, ratio) 
         }
     
 class ImageBatchRepeatInterleaving:
