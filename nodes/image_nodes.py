@@ -9,6 +9,9 @@ import os
 import re
 import json
 from PIL.PngImagePlugin import PngInfo
+import comfy.model_management
+from comfy_execution.graph import ExecutionBlocker
+
 try:
     import cv2
 except:
@@ -747,9 +750,14 @@ ComfyUI/custom_nodes/ComfyUI-KJNodes/fonts
 class GetImageSizeAndCount:
     @classmethod
     def INPUT_TYPES(s):
-        return {"required": {
-            "image": ("IMAGE",),
-        }}
+        return {
+            "required": {
+                "image": ("IMAGE",),
+            },
+            "optional": {
+                "status": ("BOOLEAN", {"default":True} ),
+                "error_message": ("STRING", {"default":""}),
+            }}
 
     RETURN_TYPES = ("IMAGE","INT", "INT", "INT", "RATIO")
     RETURN_NAMES = ("image", "width", "height", "count", "ratio")
@@ -800,7 +808,10 @@ and passes it through unchanged.
         image = image.movedim(1,-1)
 
         return(image, image.shape[2], image.shape[1],)
-    def getsize(self, image):
+    def getsize(self, image, status:bool=True, error_message:str=""):
+        if (image is None) or (not status):
+            #comfy.model_management.interrupt_current_processing()
+            return (ExecutionBlocker(None), )
         width = image.shape[2]
         height = image.shape[1]
         count = image.shape[0]
