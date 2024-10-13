@@ -830,7 +830,9 @@ and passes it through unchanged.
                     target_height = H//ratio
                     target_width = W//ratio
                 else:
-                    ratio = 2
+                    # ratio = 2
+                    # use 4 now, 2 is not good for upscale
+                    ratio = 4
                     target_height = H//ratio
                     target_width = W//ratio
             cur_image, cur_width, cur_height = self.resizeHank(cur_image, target_width, target_height, True, 'lanczos', 64)
