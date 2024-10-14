@@ -827,14 +827,14 @@ and passes it through unchanged.
                 max_length = max(H,W)
                 if max_length > 1024:
                     ratio = 4
-                    target_height = H//ratio
-                    target_width = W//ratio
-                else:
-                    # ratio = 2
+                elif max_length > 512:
+                    ratio = 2
                     # use 4 now, 2 is not good for upscale
-                    ratio = 4
-                    target_height = H//ratio
-                    target_width = W//ratio
+                    # ratio = 4
+                else:
+                    ratio = 1
+                target_height = H//ratio
+                target_width = W//ratio
             cur_image, cur_width, cur_height = self.resizeHank(cur_image, target_width, target_height, True, 'lanczos', 64)
             if output_image is not None:
                 output_image = torch.cat((output_image, cur_image),dim=0)
